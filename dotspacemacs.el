@@ -32,7 +32,11 @@ This function should only modify configuration layer settings."
 
    ;; List of configuration layers to load.
    dotspacemacs-configuration-layers
-   '(python
+   '(html
+     javascript
+     systemd
+     csv
+     python
      ;; ----------------------------------------------------------------
      ;; Example of useful layers you may want to use right away.
      ;; Uncomment some layer names and press `SPC f e R' (Vim style) or
@@ -54,6 +58,8 @@ This function should only modify configuration layer settings."
      (shell :variables
             shell-default-height 30
             shell-default-position 'bottom)
+     (shell-scripts :variables
+                    shell-scripts-format-on-save t)
      spell-checking
      syntax-checking
      version-control
@@ -67,10 +73,13 @@ This function should only modify configuration layer settings."
    ;; `dotspacemacs/user-config'. To use a local version of a package, use the
    ;; `:location' property: '(your-package :location "~/path/to/your-package/")
    ;; Also include the dependencies as they will not be resolved automatically.
-   dotspacemacs-additional-packages '(highlight-indent-guides
+   dotspacemacs-additional-packages '(
+                                      epkg
+                                      highlight-indent-guides
                                       pyimport
                                       pyimpsort
-                                      python-pycompile
+                                      ;;python-pycompile
+                                      wolfram-mode
                                       )
 
    ;; A list of packages that cannot be updated.
@@ -87,7 +96,7 @@ This function should only modify configuration layer settings."
    ;; installs only the used packages but won't delete unused ones. `all'
    ;; installs *all* packages supported by Spacemacs and never uninstalls them.
    ;; (default is `used-only')
-   dotspacemacs-install-packages 'used-only))
+   dotspacemacs-install-packages 'used-but-keep-unused))
 
 (defun dotspacemacs/init ()
   "Initialization:
@@ -265,7 +274,7 @@ It should only modify the values of Spacemacs settings."
    ;; a non-negative integer (pixel size), or a floating-point (point size).
    ;; Point size is recommended, because it's device independent. (default 10.0)
    dotspacemacs-default-font '("Source Code Pro"
-                               :size 24.0
+                               :size 18.0
                                :weight normal
                                :width normal)
 
@@ -578,7 +587,31 @@ dump."
 
 (defun dotspacemacs/user-config ()
 
+  (setq
+   dired-kill-when-opening-new-dired-buffer t ;; Only one dired buffer at a time.
+   global-hl-line-mode nil                    ;; Don't highlight the current line.
+   global-vi-tilde-fringe-mode nil            ;; No tildes on blank lines.
+   column-number-mode t             ;; Column numbers everywhere.
+   linum-format "%5d | "            ;; Put a little space after the
+                                    ;; line numbers so as not to crowd the
+                                    ;; text.
+   dotspacemacs-path "~/.spacemacs" ;; Location of this file.
+   find-file-visit-truename t
+   word-wrap t
+   dired-kill-when-opening-new-dired-buffer t ;; Only one dired buffer at a time.
+   global-hl-line-mode nil           ;; Don't highlight the current line.
+   global-vi-tilde-fringe-mode nil   ;; No tildes on blank lines.
+   menu-bar-mode t                   ;; Show the menu bar.
+   column-number-mode t              ;; Column numbers everywhere.
+   linum-format "%5d | "             ;; Put a little space after the
+   ;; line numbers so as not to crowd the
+   ;; text.
+   dotspacemacs-path "~/.spacemacs" ;; Location of this file.
+   find-file-visit-truename t)
+
   (global-linum-mode t)
+  (global-undo-tree-mode t)
+  (global-undo-tree-mode-enable-in-buffers)
 
   (setq desktop-dirname         "~/.emacs.d/desktop"
         desktop-base-file-name  "emacs.desktop"
@@ -588,39 +621,29 @@ dump."
                                         ;desktop-files-not-to-save nil
         desktop-load-locked-desktop nil)
 
-  (setq
-   dired-kill-when-opening-new-dired-buffer t  ;; Only one dired buffer at a time.
-   global-hl-line-mode nil                     ;; Don't highlight the current line.
-   global-vi-tilde-fringe-mode nil             ;; No tildes on blank lines.
-   menu-bar-mode t                             ;; Show the menu bar.
-   column-number-mode t                        ;; Column numbers everywhere.
-   linum-format "%5d | "                       ;; Put a little space after the
-   ;; line numbers so as not to crowd the
-   ;; text.
-   dotspacemacs-path "~/.spacemacs"            ;; Location of this file.
-   )
-
   ;; ange-ftp configuration
-  
-  (setq ange-ftp-try-passive-mode   t
-        ange-ftp-ftp-program-name   "ftp"
-        )
+
+  ;; (setq ange-ftp-try-passive-mode   t
+  ;;       ange-ftp-ftp-program-name   "ftp"
+  ;;       )
 
   (setq vterm-shell "/usr/bin/bash"
         vterm-tramp-shells '(("docker" "/bin/sh") ("ssh" "/bin/bash")))
 
   (add-hook 'vterm-mode 'goto-address-mode)
 
-  (defun foo ()
-    (condition-case err
-        (progn
-          (print "Caught foo-error.")
-          (print "Handled foo-error.")
-          nil
-          ;;'err
-          )
-      (print "La la, doing stuff...")
-      (signal buffer-read-only "foo: buffer is read only")))
+  ;; (defun foo ()
+  ;;   (condition-case err
+  ;;       (progn
+  ;;         (print "Caught foo-error.")
+  ;;         (print "Handled foo-error.")
+  ;;         nil
+  ;;         ;;'err
+  ;;         )
+  ;;     (print "La la, doing stuff...")
+  ;;     (signal buffer-read-only "foo: buffer is read only")))
+
+  (setq flycheck-textlint-config "~/.config/textlint/textlintrc.json")
 
   ;; Configure up and down arrows to traverse through history in IELM.
 
@@ -632,8 +655,8 @@ dump."
 
   ;; Makes matching parens easy and fun lol
 
-  (add-hook 'emacs-lisp-mode 'el-fly-indent-mode)
-  (add-hook 'shell-script-mode 'flycheck-mode)
+  ;; (add-hook 'emacs-lisp-mode 'el-fly-indent-mode)
+  ;; (add-hook 'shell-script-mode 'flycheck-mode)
 
   (defun setup-python-mode-goodies ()
     (setq python-mode-minor-modes-to-enable
@@ -644,123 +667,119 @@ dump."
           (setq blacken-line-length 72
                 whitespace-action 'cleanup)))
 
-    (add-hook 'python-mode-hook
-              'setup-python-mode-goodies)
+  (add-hook 'python-mode-hook
+            'setup-python-mode-goodies)
 
-    ;; (defvar friendlier-eval-value)
+  ;; (defvar friendlier-eval-value)
 
-    ;; (defun ielm-friendlier-eval (ielm-eval &rest args)
-    ;;   (print "IELM friendlier eval, at your service!")
-    ;;   (funcall 'ielm-eval args))
+  ;; (defun ielm-friendlier-eval (ielm-eval &rest args)
+  ;;   (print "IELM friendlier eval, at your service!")
+  ;;   (funcall 'ielm-eval args))
 
-    ;; (add-hook 'ielm-mode-hook
-    ;;           (lambda ()
-    ;;             (advice-add 'ielm-friendlier-eval :override 'ielm-eval-input)))
+  ;; (add-hook 'ielm-mode-hook
+  ;;           (lambda ()
+  ;;             (advice-add 'ielm-friendlier-eval :override 'ielm-eval-input)))
 
-    (defun advice-unadvice (sym)
-      "Remove all advices from symbol SYM."
-      (interactive "aFunction symbol: ")
-      (advice-mapc (lambda (advice _props) (advice-remove sym advice)) sym))
+  (defun active-minor-modes-list ()
+    (delq nil
+          (mapcar
+           (lambda (x)
+             (let ((car-x (car x)))
+               (when (and (symbolp car-x) (symbol-value car-x))
+                 x)))
+           minor-mode-alist)))
 
-    (defun reset-ielm ()
-      (interactive)
-      (advice-unadvice 'ielm-eval-input)
-      (advice-unadvice 'ielm-friendlier-eval)
-      (ielm))
+  (defun advice-unadvice (sym)
+    "Remove all advices from symbol SYM."
+    (interactive "aFunction symbol: ")
+    (advice-mapc (lambda (advice _props) (advice-remove sym advice)) sym))
 
-    (defalias 'ielm-reset 'reset-ielm)
+  (defun install-elisp-package (pkg)
+    (use-package pkg
+      :ensure t))
 
-    (defalias 'reload-user-config 'dotspacemacs/sync-configuration-layers)
+  (defun reset-ielm ()
+    (interactive)
+    (advice-unadvice 'ielm-eval-input)
+    (advice-unadvice 'ielm-friendlier-eval)
+    (ielm))
 
-    (defalias 'where-defined 'symbol-file)
+  (defalias 'ielm-reset 'reset-ielm)
 
-    (defalias 'installed-p 'package-installed-p)
+  (defalias 'reload-user-config 'dotspacemacs/sync-configuration-layers)
 
-    (defun edit-user-config ()
-      (interactive)
-      (find-file dotspacemacs-path)
-      (goto-char (point-min))
-      (search-forward "defun dotspacemacs/user-config"))
+  (defalias 'where-defined 'symbol-file)
 
-    (defun buffer-string* (buffer)
-      (with-current-buffer buffer
-        (buffer-substring-no-properties (point-min) (point-max))))
+  (defalias 'installed-p 'package-installed-p)
 
-    (defun all-matches (regexp string)
-      "Get a list of all regexp matches in a string"
-      (save-match-data
-        (let ((pos 0)
-              matches)
-          (while (string-match regexp string pos)
-            (push (match-string 0 string) matches)
-            (setq pos (match-end 0)))
-          matches)))
+  (defun edit-user-config ()
+    (interactive)
+    (find-file dotspacemacs-path)
+    (goto-char (point-min))
+    (search-forward "defun dotspacemacs/user-config"))
 
-    (defun set-region-writeable (begin end)
-      "Removes the read-only text property from the marked region."
-      ;; See http://stackoverflow.com/questions/7410125
-      (interactive "r")
-      (let ((modified (buffer-modified-p))
-            (inhibit-read-only t))
-        (remove-text-properties begin end '(read-only t))
-        (set-buffer-modified-p modified)))
+  (defun buffer-string* (buffer)
+    (with-current-buffer buffer
+      (buffer-substring-no-properties (point-min) (point-max))))
 
-    (defun clear-buffer ()
-      "Clear whole buffer add contents to the kill ring."
-      (interactive)
-      (kill-region (point-min) (point-max)))
+  (defun all-matches (regexp string)
+    "Get a list of all regexp matches in a string"
+    (save-match-data
+      (let ((pos 0)
+            matches)
+        (while (string-match regexp string pos)
+          (push (match-string 0 string) matches)
+          (setq pos (match-end 0)))
+        matches)))
 
-    (defun clear-buffer-permenantly ()
-      "Clear whole buffer, contents is not added to the kill ring."
-      (interactive)
-      (delete-region (point-min) (point-max)))
+  (defun set-region-writeable (begin end)
+    "Removes the read-only text property from the marked region."
+    ;; See http://stackoverflow.com/questions/7410125
+    (interactive "r")
+    (let ((modified (buffer-modified-p))
+          (inhibit-read-only t))
+      (remove-text-properties begin end '(read-only t))
+      (set-buffer-modified-p modified)))
 
-    (defun ielm-clear-buffer ()
-      (interactive)
-      ;; (if (eq (current-buffer) (get-ielm-buffer))
-      ;; (progn
-      ;;   (set-region-writeable (point-min) (point-max))
-      ;;   (clear-buffer))))))
-      (comint-clear-buffer))
-    )
+  (defun clear-buffer ()
+    "Clear whole buffer add contents to the kill ring."
+    (interactive)
+    (kill-region (point-min) (point-max)))
 
-  ;; Do not write anything past this comment. This is where Emacs will
-  ;; auto-generate custom variable definitions.
-  (defun dotspacemacs/emacs-custom-settings ()
-    "Emacs custom settings.
+  (defun clear-buffer-permenantly ()
+    "Clear whole buffer, contents is not added to the kill ring."
+    (interactive)
+    (delete-region (point-min) (point-max)))
+
+  (defun ielm-clear-buffer ()
+    (interactive)
+    ;; (if (eq (current-buffer) (get-ielm-buffer))
+    ;; (progn
+    ;;   (set-region-writeable (point-min) (point-max))
+    ;;   (clear-buffer))))))
+    (comint-clear-buffer))
+  )
+
+;; Do not write anything past this comment. This is where Emacs will
+;; auto-generate custom variable definitions.
+(defun dotspacemacs/emacs-custom-settings ()
+  "Emacs custom settings.
 This is an auto-generated function, do not modify its content directly, use
 Emacs customize menu instead.
 This function is called at the very end of Spacemacs initialization."
-    (custom-set-variables
-     ;; custom-set-variables was added by Custom.
-     ;; If you edit it by hand, you could mess it up, so be careful.
-     ;; Your init file should contain only one such instance.
-     ;; If there is more than one, they won't work right.
-     '(package-selected-packages
-       '(pyimport pyimpsort highlight-indent-guides ag geiser-guile geiser-racket geiser xref xah-fly-keys slime-repl-ansi-color slime-repl-mode blacken code-cells company-anaconda anaconda-mode counsel-gtags counsel swiper ivy cython-mode dap-mode lsp-docker lsp-treemacs bui ggtags helm-cscope helm-pydoc importmagic epc ctable concurrent deferred live-py-mode lsp-pyright lsp-python-ms lsp-mode nose pip-requirements pipenv load-env-vars pippel poetry py-isort pydoc pyenv-mode pythonic pylookup pytest pyvenv sphinx-doc stickyfunc-enhance xcscope yapfify eaf ac-ispell auto-complete auto-dictionary auto-yasnippet browse-at-remote flycheck-pos-tip pos-tip flyspell-correct-helm flyspell-correct forge yaml ghub closql emacsql treepy fuzzy gh-md git-gutter-fringe fringe-helper git-gutter git-link git-messenger git-modes git-timemachine gitignore-templates helm-c-yasnippet helm-company company helm-git-grep helm-ls-git markdown-toc markdown-mode mmm-mode mwim smeargle treemacs-magit magit magit-section git-commit with-editor transient unfill yasnippet-snippets yasnippet ws-butler writeroom-mode winum which-key volatile-highlights vim-powerline vi-tilde-fringe uuidgen use-package undo-tree treemacs-projectile treemacs-persp treemacs-icons-dired toc-org term-cursor symon symbol-overlay string-inflection string-edit-at-point spacemacs-whitespace-cleanup spacemacs-purpose-popwin spaceline space-doc restart-emacs request rainbow-delimiters quickrun popwin pcre2el password-generator paradox overseer org-superstar open-junk-file nameless multi-line macrostep lorem-ipsum link-hint inspector info+ indent-guide hybrid-mode hungry-delete holy-mode hl-todo highlight-parentheses highlight-numbers highlight-indentation hide-comnt help-fns+ helm-xref helm-themes helm-swoop helm-purpose helm-projectile helm-org helm-mode-manager helm-make helm-descbinds helm-ag google-translate golden-ratio flycheck-package flycheck-elsa flx-ido fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-textobj-line evil-surround evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-evilified-state evil-escape evil-collection evil-cleverparens evil-args evil-anzu eval-sexp-fu emr elisp-slime-nav elisp-def editorconfig dumb-jump drag-stuff dotenv-mode dired-quick-sort diminish devdocs define-word column-enforce-mode clean-aindent-mode centered-cursor-mode auto-highlight-symbol auto-compile all-the-icons aggressive-indent ace-link ace-jump-helm-line)))
-    (custom-set-faces
-     ;; custom-set-faces was added by Custom.
-     ;; If you edit it by hand, you could mess it up, so be careful.
-     ;; Your init file should contain only one such instance.
-     ;; If there is more than one, they won't work right.
-     )
-    )
-  (defun dotspacemacs/emacs-custom-settings ()
-    "Emacs custom settings.
-This is an auto-generated function, do not modify its content directly, use
-Emacs customize menu instead.
-This function is called at the very end of Spacemacs initialization."
-    (custom-set-variables
-     ;; custom-set-variables was added by Custom.
-     ;; If you edit it by hand, you could mess it up, so be careful.
-     ;; Your init file should contain only one such instance.
-     ;; If there is more than one, they won't work right.
-     '(package-selected-packages
-       '(el-fly-indent-mode vi-tilde-fringe yasnippet-snippets yapfify xterm-color ws-butler writeroom-mode winum which-key volatile-highlights vim-powerline uuidgen use-package unfill undo-tree treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired toc-org terminal-here term-cursor symon symbol-overlay string-inflection string-edit-at-point sphinx-doc spacemacs-whitespace-cleanup spacemacs-purpose-popwin spaceline space-doc smeargle shell-pop restart-emacs request rainbow-delimiters quickrun pytest pylookup pyimpsort pyimport pyenv-mode pydoc py-isort popwin poetry pippel pipenv pip-requirements pcre2el password-generator paradox overseer orgit-forge org-superstar org-rich-yank org-projectile org-present org-pomodoro org-mime org-download org-contrib org-cliplink open-junk-file nose nameless mwim multi-vterm multi-term multi-line mmm-mode markdown-toc macrostep lorem-ipsum live-py-mode link-hint inspector info+ indent-guide importmagic hybrid-mode hungry-delete htmlize holy-mode hl-todo highlight-parentheses highlight-numbers highlight-indentation highlight-indent-guides hide-comnt help-fns+ helm-xref helm-themes helm-swoop helm-pydoc helm-purpose helm-projectile helm-org-rifle helm-org helm-mode-manager helm-make helm-ls-git helm-git-grep helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gnuplot gitignore-templates git-timemachine git-modes git-messenger git-link git-gutter-fringe gh-md geiser-racket geiser-guile fuzzy flyspell-correct-helm flycheck-pos-tip flycheck-package flycheck-elsa flx-ido fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-textobj-line evil-surround evil-org evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-evilified-state evil-escape evil-collection evil-cleverparens evil-args evil-anzu eval-sexp-fu eshell-z eshell-prompt-extras esh-help emr elisp-slime-nav elisp-def editorconfig dumb-jump drag-stuff dotenv-mode dired-quick-sort diminish devdocs define-word cython-mode company-anaconda column-enforce-mode code-cells clean-aindent-mode centered-cursor-mode browse-at-remote blacken auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile all-the-icons aggressive-indent ace-link ace-jump-helm-line ac-ispell)))
-    (custom-set-faces
-     ;; custom-set-faces was added by Custom.
-     ;; If you edit it by hand, you could mess it up, so be careful.
-     ;; Your init file should contain only one such instance.
-     ;; If there is more than one, they won't work right.
-     )
-    )
+  (custom-set-variables
+   ;; custom-set-variables was added by Custom.
+   ;; If you edit it by hand, you could mess it up, so be careful.
+   ;; Your init file should contain only one such instance.
+   ;; If there is more than one, they won't work right.
+   '(ignored-local-variable-values '((Base . 10) (Syntax . ANSI-Common-Lisp)))
+   '(package-selected-packages
+     '(wolfram-mode latex-preview-mode fsm xenops pkg latex-change-env latex-packages laas company-web web-completion-data counsel-css emmet-mode helm-css-scss pug-mode sass-mode haml-mode scss-mode slim-mode tagedit web-mode company-shell fish-mode flycheck-bashate insert-shebang shfmt reformatter org dockerfile-mode add-node-modules-path counsel-gtags counsel swiper ivy dap-mode lsp-docker lsp-treemacs bui lsp-mode ggtags impatient-mode import-js grizzl js-doc js2-refactor multiple-cursors livid-mode nodejs-repl npm-mode prettier-js skewer-mode js2-mode simple-httpd tern web-beautify systemd journalctl-mode csv-mode epkg el-fly-indent-mode vi-tilde-fringe yasnippet-snippets yapfify xterm-color ws-butler writeroom-mode winum which-key volatile-highlights vim-powerline uuidgen use-package unfill undo-tree treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired toc-org terminal-here term-cursor symon symbol-overlay string-inflection string-edit-at-point sphinx-doc spacemacs-whitespace-cleanup spacemacs-purpose-popwin spaceline space-doc smeargle shell-pop restart-emacs request rainbow-delimiters quickrun pytest pylookup pyimpsort pyimport pyenv-mode pydoc py-isort popwin poetry pippel pipenv pip-requirements pcre2el password-generator paradox overseer orgit-forge org-superstar org-rich-yank org-projectile org-present org-pomodoro org-mime org-download org-contrib org-cliplink open-junk-file nose nameless mwim multi-vterm multi-term multi-line mmm-mode markdown-toc macrostep lorem-ipsum live-py-mode link-hint inspector info+ indent-guide importmagic hybrid-mode hungry-delete htmlize holy-mode hl-todo highlight-parentheses highlight-numbers highlight-indentation highlight-indent-guides hide-comnt help-fns+ helm-xref helm-themes helm-swoop helm-pydoc helm-purpose helm-projectile helm-org-rifle helm-org helm-mode-manager helm-make helm-ls-git helm-git-grep helm-descbinds helm-company helm-c-yasnippet helm-ag google-translate golden-ratio gnuplot gitignore-templates git-timemachine git-modes git-messenger git-link git-gutter-fringe gh-md geiser-racket geiser-guile fuzzy flyspell-correct-helm flycheck-pos-tip flycheck-package flycheck-elsa flx-ido fancy-battery eyebrowse expand-region evil-visualstar evil-visual-mark-mode evil-unimpaired evil-tutor evil-textobj-line evil-surround evil-org evil-numbers evil-nerd-commenter evil-mc evil-matchit evil-lisp-state evil-lion evil-indent-plus evil-iedit-state evil-goggles evil-exchange evil-evilified-state evil-escape evil-collection evil-cleverparens evil-args evil-anzu eval-sexp-fu eshell-z eshell-prompt-extras esh-help emr elisp-slime-nav elisp-def editorconfig dumb-jump drag-stuff dotenv-mode dired-quick-sort diminish devdocs define-word cython-mode company-anaconda column-enforce-mode code-cells clean-aindent-mode centered-cursor-mode browse-at-remote blacken auto-yasnippet auto-highlight-symbol auto-dictionary auto-compile all-the-icons aggressive-indent ace-link ace-jump-helm-line ac-ispell)))
+  (custom-set-faces
+   ;; custom-set-faces was added by Custom.
+   ;; If you edit it by hand, you could mess it up, so be careful.
+   ;; Your init file should contain only one such instance.
+   ;; If there is more than one, they won't work right.
+   )
+  )
+
